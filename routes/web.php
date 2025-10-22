@@ -19,6 +19,10 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 // Protected routes
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/onus', function () {
+        return view('onus');
+    })->name('onus');
+    Route::get('/onus/export', [\App\Http\Controllers\OnuExportController::class, 'export'])->name('onus.export');
     
     // Admin routes
     Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {

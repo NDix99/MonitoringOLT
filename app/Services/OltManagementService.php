@@ -5,35 +5,38 @@ namespace App\Services;
 use App\Models\Olt;
 use App\Models\Onu;
 use phpseclib3\Net\SSH2;
-use phpseclib3\Net\Telnet;
 use Illuminate\Support\Facades\Log;
 
 class OltManagementService
 {
-    public function connectToOlt(Olt $olt, string $username, string $password)
+    public function connectToOlt(Olt $olt, string $username = null, string $password = null)
     {
         try {
-            // Try SSH first
-            $ssh = new SSH2($olt->ip_address, 22);
+            // Use provided credentials or fallback to OLT's stored credentials
+            $username = $username ?: $olt->ssh_username;
+            $password = $password ?: $olt->ssh_password;
+            $port = $olt->ssh_port ?: 22;
+
+            if (!$username || !$password) {
+                throw new \Exception("SSH credentials not configured for OLT {$olt->name}");
+            }
+
+            // Try SSH connection
+            Log::info("Attempting SSH connection to {$olt->ip_address}:{$port} with username: {$username}");
+            $ssh = new SSH2($olt->ip_address, $port);
             if ($ssh->login($username, $password)) {
+                Log::info("SSH connection successful for OLT {$olt->name} on port {$port}");
                 return $ssh;
+            } else {
+                throw new \Exception("SSH login failed for OLT {$olt->name} on port {$port}");
             }
         } catch (\Exception $e) {
-            Log::warning("SSH connection failed for OLT {$olt->name}: " . $e->getMessage());
-        }
-
-        try {
-            // Fallback to Telnet
-            $telnet = new Telnet($olt->ip_address, 23);
-            $telnet->login($username, $password);
-            return $telnet;
-        } catch (\Exception $e) {
-            Log::error("Telnet connection failed for OLT {$olt->name}: " . $e->getMessage());
+            Log::error("SSH connection failed for OLT {$olt->name}: " . $e->getMessage());
             throw new \Exception("Failed to connect to OLT {$olt->name}: " . $e->getMessage());
         }
     }
 
-    public function rebootOnu(Olt $olt, Onu $onu, string $username, string $password)
+    public function rebootOnu(Olt $olt, Onu $onu, string $username = null, string $password = null)
     {
         try {
             $connection = $this->connectToOlt($olt, $username, $password);
@@ -83,7 +86,7 @@ class OltManagementService
         }
     }
 
-    public function getOnuStatus(Olt $olt, Onu $onu, string $username, string $password)
+    public function getOnuStatus(Olt $olt, Onu $onu, string $username = null, string $password = null)
     {
         try {
             $connection = $this->connectToOlt($olt, $username, $password);
@@ -112,7 +115,7 @@ class OltManagementService
         }
     }
 
-    public function getOnuInfo(Olt $olt, Onu $onu, string $username, string $password)
+    public function getOnuInfo(Olt $olt, Onu $onu, string $username = null, string $password = null)
     {
         try {
             $connection = $this->connectToOlt($olt, $username, $password);
@@ -141,7 +144,7 @@ class OltManagementService
         }
     }
 
-    public function executeCustomCommand(Olt $olt, string $command, string $username, string $password)
+    public function executeCustomCommand(Olt $olt, string $command, string $username = null, string $password = null)
     {
         try {
             $connection = $this->connectToOlt($olt, $username, $password);
@@ -160,3 +163,4 @@ class OltManagementService
         }
     }
 }
+

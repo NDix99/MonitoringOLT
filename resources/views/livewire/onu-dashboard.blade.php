@@ -369,9 +369,9 @@
                                 <td>{{ $onu->serial_number ?: 'N/A' }}</td>
                                 <td>{{ $onu->model ?: 'F660V5.2' }}</td>
                                 <td>
-                                    <button class="btn btn-primary btn-sm">
-                                        <i class="fas fa-cog"></i> Setting
-                                    </button>
+                                    <a href="{{ route('onus.detail', $onu->id) }}" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-eye"></i> View
+                                    </a>
                                 </td>
                             </tr>
                         @empty

@@ -175,6 +175,12 @@
                         <span>All ONUs</span>
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('ssh-settings') ? 'active' : '' }}" href="{{ route('ssh-settings') }}">
+                        <i class="fas fa-terminal"></i>
+                        <span>SSH Settings</span>
+                    </a>
+                </li>
                 
                 @auth
                     @if(Auth::user()->isAdmin())

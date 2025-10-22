@@ -23,6 +23,12 @@ Route::middleware('auth')->group(function () {
         return view('onus');
     })->name('onus');
     Route::get('/onus/export', [\App\Http\Controllers\OnuExportController::class, 'export'])->name('onus.export');
+    Route::get('/onus/{onu}', function ($onuId) {
+        return view('onu-detail', ['onuId' => $onuId]);
+    })->name('onus.detail');
+    Route::get('/ssh-settings', function () {
+        return view('ssh-settings');
+    })->name('ssh-settings');
     
     // Admin routes
     Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {

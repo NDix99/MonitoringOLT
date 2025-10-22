@@ -16,6 +16,10 @@ class Olt extends Model
         'polling_interval',
         'is_active',
         'description',
+        'ssh_username',
+        'ssh_password',
+        'ssh_port',
+        'ssh_enabled',
     ];
 
     protected $casts = [
@@ -23,6 +27,8 @@ class Olt extends Model
         'snmp_port' => 'integer',
         'snmp_version' => 'integer',
         'polling_interval' => 'integer',
+        'ssh_port' => 'integer',
+        'ssh_enabled' => 'boolean',
     ];
 
     public function onus(): HasMany

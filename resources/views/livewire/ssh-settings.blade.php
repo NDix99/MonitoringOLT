@@ -33,7 +33,7 @@
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center">
                                         <small class="text-muted">{{ $olt->description ?: 'No description' }}</small>
-                                        <div>
+<div>
                                             @if($olt->ssh_enabled)
                                                 <span class="badge bg-success">SSH Enabled</span>
                                             @else

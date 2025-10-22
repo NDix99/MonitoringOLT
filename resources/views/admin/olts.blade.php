@@ -28,8 +28,10 @@
                             <th>ID</th>
                             <th>Name</th>
                             <th>IP Address</th>
-                            <th>Community</th>
-                            <th>Port</th>
+                            <th>Version</th>
+                            <th>Temperature</th>
+                            <th>Fan Speed</th>
+                            <th>Uptime</th>
                             <th>ONUs</th>
                             <th>Status</th>
                             <th>Last Poll</th>
@@ -40,15 +42,56 @@
                         @forelse($olts as $olt)
                             <tr>
                                 <td>{{ $olt->id }}</td>
-                                <td>{{ $olt->name }}</td>
-                                <td>{{ $olt->ip_address }}</td>
-                                <td>{{ $olt->community_string }}</td>
-                                <td>{{ $olt->snmp_port }}</td>
                                 <td>
-                                    <span class="badge badge-info">{{ $olt->onus_count }}</span>
+                                    <strong>{{ $olt->name }}</strong>
+                                    @if($olt->description)
+                                        <br><small class="text-muted">{{ $olt->description }}</small>
+                                    @endif
                                 </td>
                                 <td>
-                                    <span class="badge badge-{{ $olt->is_active ? 'success' : 'danger' }}">
+                                    <code>{{ $olt->ip_address }}</code>
+                                    <br><small class="text-muted">Port: {{ $olt->snmp_port }}</small>
+                                </td>
+                                <td>
+                                    @if($olt->version)
+                                        <span class="badge bg-info">{{ $olt->version }}</span>
+                                    @else
+                                        <span class="text-muted">Unknown</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if($olt->temperature)
+                                        <span class="badge bg-{{ $olt->temperature_status === 'critical' ? 'danger' : ($olt->temperature_status === 'warning' ? 'warning' : 'success') }}">
+                                            {{ number_format($olt->temperature, 1) }}°C
+                                        </span>
+                                    @else
+                                        <span class="text-muted">N/A</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if($olt->fan_speed)
+                                        <span class="badge bg-{{ $olt->fan_speed_status === 'high' ? 'warning' : ($olt->fan_speed_status === 'medium' ? 'info' : 'success') }}">
+                                            {{ $olt->fan_speed }}%
+                                        </span>
+                                    @else
+                                        <span class="text-muted">N/A</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if($olt->uptime_seconds)
+                                        <span class="badge bg-secondary">{{ $olt->formatted_uptime }}</span>
+                                        @if($olt->last_system_check)
+                                            <br><small class="text-muted">Updated: {{ $olt->last_system_check->diffForHumans() }}</small>
+                                        @endif
+                                    @else
+                                        <span class="text-muted">Unknown</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">{{ $olt->onus_count }}</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ $olt->is_active ? 'success' : 'danger' }}">
                                         {{ $olt->is_active ? 'Active' : 'Inactive' }}
                                     </span>
                                 </td>

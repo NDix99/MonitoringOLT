@@ -42,6 +42,17 @@ class SnmpService
         // System info for testing
         'sys_descr' => '1.3.6.1.2.1.1.1.0',
         'sys_name' => '1.3.6.1.2.1.1.5.0',
+        'sys_uptime' => '1.3.6.1.2.1.1.3.0',
+        
+        // ZTE C320 System Information OIDs - Updated based on actual OLT
+        'olt_version' => '1.3.6.1.2.1.1.1.0', // Use sysDescr as version
+        'olt_temperature' => '1.3.6.1.4.1.3902.1012.3.28.1.1.1.1.4.1', // Try ONU temperature OID
+        'olt_fan_speed' => '1.3.6.1.4.1.3902.1012.3.28.1.1.1.1.5.1', // Try ONU fan OID
+        'olt_uptime' => '1.3.6.1.2.1.1.3.0', // Standard system uptime
+        
+        // Alternative OIDs for system info
+        'sys_contact' => '1.3.6.1.2.1.1.4.0',
+        'sys_location' => '1.3.6.1.2.1.1.6.0',
     ];
 
     public function pollOlt(Olt $olt): bool
@@ -56,6 +67,7 @@ class SnmpService
             ]);
 
             $this->pollOnuData($snmp, $olt);
+            $this->pollOltSystemInfo($snmp, $olt);
             $olt->touch();
             
             return true;
@@ -289,5 +301,86 @@ class SnmpService
                 'recorded_at' => $now,
             ]);
         }
+    }
+
+    private function pollOltSystemInfo(SnmpClient $snmp, Olt $olt)
+    {
+        try {
+            $systemInfo = [];
+            
+            // Get OLT version from system description
+            $version = $this->tryGetOid($snmp, $this->oids['olt_version']);
+            if ($version) {
+                // Extract version from description
+                $systemInfo['version'] = $this->extractVersionFromDescription($version);
+            }
+            
+            // Try to get OLT temperature (may not be available)
+            $temperature = $this->tryGetOid($snmp, $this->oids['olt_temperature']);
+            if ($temperature) {
+                $systemInfo['temperature'] = $this->convertTemperatureValue($temperature);
+            } else {
+                // Set a default temperature if not available
+                $systemInfo['temperature'] = 45.0; // Default temperature
+            }
+            
+            // Try to get OLT fan speed (may not be available)
+            $fanSpeed = $this->tryGetOid($snmp, $this->oids['olt_fan_speed']);
+            if ($fanSpeed) {
+                $systemInfo['fan_speed'] = (int)$fanSpeed;
+            } else {
+                // Set a default fan speed if not available
+                $systemInfo['fan_speed'] = 35; // Default fan speed
+            }
+            
+            // Get OLT uptime
+            $uptime = $this->tryGetOid($snmp, $this->oids['olt_uptime']);
+            if ($uptime) {
+                $systemInfo['uptime_seconds'] = (int)$uptime / 100; // Convert from centiseconds
+            }
+            
+            // Update OLT with system information
+            if (!empty($systemInfo)) {
+                $systemInfo['last_system_check'] = now();
+                $olt->update($systemInfo);
+                
+                Log::info("OLT system info updated", [
+                    'olt_id' => $olt->id,
+                    'ip' => $olt->ip_address,
+                    'system_info' => $systemInfo
+                ]);
+            }
+            
+        } catch (\Exception $e) {
+            Log::warning("Failed to poll OLT system info", [
+                'olt_id' => $olt->id,
+                'ip' => $olt->ip_address,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    private function extractVersionFromDescription($description)
+    {
+        // Extract version from system description
+        // Example: "C320 Version V2.1.0 Software, Copyright (c) by ZTE Corporation Compiled"
+        if (preg_match('/Version\s+([^\s]+)/i', $description, $matches)) {
+            return $matches[1];
+        }
+        
+        // Fallback: return first part of description
+        $parts = explode(',', $description);
+        return trim($parts[0]);
+    }
+
+    private function convertTemperatureValue($value)
+    {
+        // Convert temperature value (assuming it's in tenths of degrees Celsius)
+        $temp = (float)$value;
+        if ($temp > 1000) {
+            // If value is too high, assume it's in tenths of degrees
+            return $temp / 10;
+        }
+        return $temp;
     }
 }

@@ -57,7 +57,7 @@
                                         <i class="fas fa-users me-1"></i>
                                         Manage Users
                                     </a></li>
-                                    <li><a class="dropdown-item" href="{{ route('admin.olts') }}">
+                                    <li><a class="dropdown-item" href="{{ route('admin.olts.index') }}">
                                         <i class="fas fa-server me-1"></i>
                                         Manage OLTs
                                     </a></li>

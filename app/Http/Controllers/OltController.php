@@ -6,13 +6,11 @@ use App\Models\Olt;
 use App\Services\OltManagementService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use FreeDSx\Snmp\SnmpClient;
+use FreeDSx\Snmp\Oid;
 
 class OltController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('admin');
-    }
 
     public function index()
     {
@@ -54,7 +52,7 @@ class OltController extends Controller
             'description' => $request->description,
         ]);
 
-        return redirect()->route('admin.olts')
+        return redirect()->route('admin.olts.index')
             ->with('success', 'OLT device added successfully.');
     }
 
@@ -92,14 +90,14 @@ class OltController extends Controller
             'description' => $request->description,
         ]);
 
-        return redirect()->route('admin.olts')
+        return redirect()->route('admin.olts.index')
             ->with('success', 'OLT device updated successfully.');
     }
 
     public function destroy(Olt $olt)
     {
         $olt->delete();
-        return redirect()->route('admin.olts')
+        return redirect()->route('admin.olts.index')
             ->with('success', 'OLT device deleted successfully.');
     }
 
@@ -115,12 +113,15 @@ class OltController extends Controller
     public function testSnmp(Olt $olt)
     {
         try {
-            $snmp = \Ndum\LaravelSnmp\Facades\Snmp::host($olt->ip_address)
-                ->community($olt->community_string)
-                ->version($olt->snmp_version)
-                ->port($olt->snmp_port);
+            $snmp = new SnmpClient([
+                'host' => $olt->ip_address,
+                'community' => $olt->community_string,
+                'version' => $olt->snmp_version == 1 ? 1 : 2,
+                'port' => $olt->snmp_port,
+                'timeout' => 5,
+            ]);
 
-            $sysDescr = $snmp->get('1.3.6.1.2.1.1.1.0');
+            $sysDescr = $snmp->getValue(new Oid('1.3.6.1.2.1.1.1.0'));
             
             return response()->json([
                 'success' => true,

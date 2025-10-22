@@ -61,16 +61,39 @@
                                 </td>
                                 <td>
                                     <div class="btn-group" role="group">
-                                        <button class="btn btn-sm btn-info" title="View Details">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-warning" title="Edit OLT">
+                                        <a href="{{ route('admin.olts.edit', $olt) }}" class="btn btn-sm btn-warning" title="Edit OLT">
                                             <i class="fas fa-edit"></i>
+                                        </a>
+                                        <button class="btn btn-sm btn-info test-snmp-btn" 
+                                                data-olt-id="{{ $olt->id }}" 
+                                                title="Test SNMP">
+                                            <i class="fas fa-network-wired"></i>
                                         </button>
-                                        <button class="btn btn-sm btn-{{ $olt->is_active ? 'danger' : 'success' }}" 
-                                                title="{{ $olt->is_active ? 'Deactivate' : 'Activate' }}">
-                                            <i class="fas fa-{{ $olt->is_active ? 'pause' : 'play' }}"></i>
+                                        <button class="btn btn-sm btn-secondary test-ssh-btn" 
+                                                data-olt-id="{{ $olt->id }}" 
+                                                data-olt-ip="{{ $olt->ip_address }}"
+                                                title="Test SSH">
+                                            <i class="fas fa-terminal"></i>
                                         </button>
+                                        <form action="{{ route('admin.olts.toggle', $olt) }}" method="POST" class="d-inline">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit" 
+                                                    class="btn btn-sm btn-{{ $olt->is_active ? 'danger' : 'success' }}" 
+                                                    title="{{ $olt->is_active ? 'Deactivate' : 'Activate' }}">
+                                                <i class="fas fa-{{ $olt->is_active ? 'pause' : 'play' }}"></i>
+                                            </button>
+                                        </form>
+                                        <form action="{{ route('admin.olts.destroy', $olt) }}" method="POST" class="d-inline">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" 
+                                                    class="btn btn-sm btn-danger"
+                                                    onclick="return confirm('Are you sure you want to delete this OLT?')"
+                                                    title="Delete OLT">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
                                     </div>
                                 </td>
                             </tr>
@@ -172,4 +195,126 @@
         </div>
     </div>
 </div>
+
+<!-- SSH Test Modal -->
+<div class="modal fade" id="sshTestModal" tabindex="-1" aria-labelledby="sshTestModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="sshTestModalLabel">Test SSH Connection</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="sshTestForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="ssh_username" class="form-label">SSH Username</label>
+                        <input type="text" class="form-control" id="ssh_username" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="ssh_password" class="form-label">SSH Password</label>
+                        <input type="password" class="form-control" id="ssh_password" name="password" required>
+                    </div>
+                    <div id="ssh-result" class="mt-3" style="display: none;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Test SSH</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Test SNMP Connection
+    document.querySelectorAll('.test-snmp-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const oltId = this.dataset.oltId;
+            const originalText = this.innerHTML;
+            
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            this.disabled = true;
+            
+            fetch(`/admin/olts/${oltId}/test-snmp`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('✓ SNMP Connection: SUCCESS\nSystem: ' + data.system_description);
+                        this.innerHTML = '<i class="fas fa-check text-success"></i>';
+                    } else {
+                        alert('✗ SNMP Connection: FAILED\n' + data.message);
+                        this.innerHTML = '<i class="fas fa-times text-danger"></i>';
+                    }
+                })
+                .catch(error => {
+                    alert('✗ SNMP Connection: FAILED\n' + error.message);
+                    this.innerHTML = '<i class="fas fa-times text-danger"></i>';
+                })
+                .finally(() => {
+                    setTimeout(() => {
+                        this.innerHTML = originalText;
+                        this.disabled = false;
+                    }, 3000);
+                });
+        });
+    });
+    
+    // Test SSH Connection
+    let currentOltId = null;
+    document.querySelectorAll('.test-ssh-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            currentOltId = this.dataset.oltId;
+            const oltIp = this.dataset.oltIp;
+            document.getElementById('sshTestModalLabel').textContent = `Test SSH Connection - ${oltIp}`;
+            new bootstrap.Modal(document.getElementById('sshTestModal')).show();
+        });
+    });
+    
+    // SSH Test Form
+    document.getElementById('sshTestForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const resultDiv = document.getElementById('ssh-result');
+        
+        resultDiv.style.display = 'block';
+        resultDiv.innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin"></i> Testing SSH connection...</div>';
+        
+        fetch(`/admin/olts/${currentOltId}/test-ssh`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-success">
+                        <i class="fas fa-check"></i> SSH Connection: SUCCESS<br>
+                        <small>Output: ${data.output}</small>
+                    </div>
+                `;
+            } else {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-times"></i> SSH Connection: FAILED<br>
+                        <small>${data.message}</small>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-times"></i> SSH Connection: FAILED<br>
+                    <small>${error.message}</small>
+                </div>
+            `;
+        });
+    });
+});
+</script>
 @endsection

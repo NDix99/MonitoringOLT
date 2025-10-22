@@ -24,8 +24,13 @@ Route::middleware('auth')->group(function () {
     Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
         Route::get('/', [AdminController::class, 'index'])->name('dashboard');
         Route::get('/users', [AdminController::class, 'users'])->name('users');
-        Route::get('/olts', [AdminController::class, 'oltDevices'])->name('olts');
         Route::patch('/users/{user}/toggle', [AdminController::class, 'toggleUserStatus'])->name('users.toggle');
         Route::delete('/users/{user}', [AdminController::class, 'deleteUser'])->name('users.delete');
+        
+        // OLT Management
+        Route::resource('olts', \App\Http\Controllers\OltController::class);
+        Route::get('/olts/{olt}/test-snmp', [\App\Http\Controllers\OltController::class, 'testSnmp'])->name('olts.test-snmp');
+        Route::post('/olts/{olt}/test-ssh', [\App\Http\Controllers\OltController::class, 'testSsh'])->name('olts.test-ssh');
+        Route::patch('/olts/{olt}/toggle', [\App\Http\Controllers\OltController::class, 'toggle'])->name('olts.toggle');
     });
 });

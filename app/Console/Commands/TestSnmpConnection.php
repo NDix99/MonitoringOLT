@@ -4,7 +4,8 @@ namespace App\Console\Commands;
 
 use App\Models\Olt;
 use Illuminate\Console\Command;
-use Ndum\LaravelSnmp\Facades\Snmp;
+use FreeDSx\Snmp\SnmpClient;
+use FreeDSx\Snmp\Oid;
 
 class TestSnmpConnection extends Command
 {
@@ -42,19 +43,22 @@ class TestSnmpConnection extends Command
         
         try {
             // Test basic SNMP connection
-            $snmp = Snmp::host($olt->ip_address)
-                ->community($olt->community_string)
-                ->version($olt->snmp_version)
-                ->port($olt->snmp_port);
+            $snmp = new SnmpClient([
+                'host' => $olt->ip_address,
+                'community' => $olt->community_string,
+                'version' => $olt->snmp_version == 1 ? 1 : 2,
+                'port' => $olt->snmp_port,
+                'timeout' => 5,
+            ]);
 
             // Test system description OID
-            $sysDescr = $snmp->get('1.3.6.1.2.1.1.1.0');
+            $sysDescr = $snmp->getValue(new Oid('1.3.6.1.2.1.1.1.0'));
             $this->info("✓ SNMP Connection: SUCCESS");
             $this->line("  System Description: {$sysDescr}");
             
             // Test ZTE specific OID
             try {
-                $zteOid = $snmp->get('1.3.6.1.4.1.3902.1015.3.28.1.1.1.1.3');
+                $zteOid = $snmp->getValue(new Oid('1.3.6.1.4.1.3902.1015.3.28.1.1.1.1.3'));
                 $this->info("✓ ZTE OID Access: SUCCESS");
             } catch (\Exception $e) {
                 $this->warn("⚠ ZTE OID Access: FAILED - {$e->getMessage()}");

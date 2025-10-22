@@ -9,10 +9,6 @@ use Illuminate\Http\Request;
 
 class AdminController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('admin');
-    }
 
     public function index()
     {
@@ -39,11 +35,6 @@ class AdminController extends Controller
         return view('admin.users', compact('users'));
     }
 
-    public function oltDevices()
-    {
-        $olts = Olt::withCount('onus')->latest()->paginate(20);
-        return view('admin.olts', compact('olts'));
-    }
 
     public function toggleUserStatus(User $user)
     {

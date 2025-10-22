@@ -69,6 +69,11 @@
                                                 title="Test SNMP">
                                             <i class="fas fa-network-wired"></i>
                                         </button>
+                                        <button class="btn btn-sm btn-success fetch-onu-btn" 
+                                                data-olt-id="{{ $olt->id }}" 
+                                                title="Fetch ONU">
+                                            <i class="fas fa-download"></i>
+                                        </button>
                                         <button class="btn btn-sm btn-secondary test-ssh-btn" 
                                                 data-olt-id="{{ $olt->id }}" 
                                                 data-olt-ip="{{ $olt->ip_address }}"
@@ -227,6 +232,55 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Fetch ONUs
+    document.querySelectorAll('.fetch-onu-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const oltId = this.dataset.oltId;
+            const originalHtml = this.innerHTML;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            this.disabled = true;
+
+            fetch(`/admin/olts/${oltId}/fetch-onus`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Accept': 'application/json'
+                }
+            })
+            .then(async res => {
+                const ct = res.headers.get('content-type') || '';
+                if (!ct.includes('application/json')) {
+                    const text = await res.text();
+                    throw new Error(text);
+                }
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    throw new Error(data.message || 'Unknown error');
+                }
+                return data;
+            })
+            .then(data => {
+                if (data.success) {
+                    alert(`✓ Fetch ONU selesai. Total: ${data.counts.total_onus}, Online: ${data.counts.online_onus}, Offline: ${data.counts.offline_onus}`);
+                    this.innerHTML = '<i class="fas fa-check text-success"></i>';
+                } else {
+                    alert('✗ Fetch ONU gagal\n' + data.message);
+                    this.innerHTML = '<i class="fas fa-times text-danger"></i>';
+                }
+            })
+            .catch(err => {
+                const msg = ('' + err.message).replace(/<[^>]*>/g, '').slice(0, 200);
+                alert('✗ Fetch ONU gagal\n' + msg);
+                this.innerHTML = '<i class="fas fa-times text-danger"></i>';
+            })
+            .finally(() => {
+                setTimeout(() => {
+                    this.innerHTML = originalHtml;
+                    this.disabled = false;
+                }, 3000);
+            });
+        });
+    });
     // Test SNMP Connection
     document.querySelectorAll('.test-snmp-btn').forEach(btn => {
         btn.addEventListener('click', function() {

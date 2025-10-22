@@ -6,6 +6,7 @@ use App\Models\Olt;
 use App\Services\OltManagementService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Artisan;
 use FreeDSx\Snmp\SnmpClient;
 use FreeDSx\Snmp\Oid;
 
@@ -172,6 +173,29 @@ class OltController extends Controller
                 'success' => false,
                 'message' => 'SSH connection failed: ' . $e->getMessage()
             ], 400);
+        }
+    }
+
+    public function fetchOnus(Olt $olt)
+    {
+        try {
+            Artisan::call('olt:poll', ['--olt-id' => $olt->id]);
+            $olt->refresh();
+            $counts = [
+                'total_onus' => $olt->onus()->count(),
+                'online_onus' => $olt->onus()->where('status_code', 3)->count(),
+                'offline_onus' => $olt->onus()->where('status_code', 6)->count(),
+            ];
+            return response()->json([
+                'success' => true,
+                'message' => 'Fetch ONU completed',
+                'counts' => $counts,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch ONU data: ' . $e->getMessage(),
+            ], 500);
         }
     }
 }

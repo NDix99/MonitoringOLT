@@ -32,5 +32,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/olts/{olt}/test-snmp', [\App\Http\Controllers\OltController::class, 'testSnmp'])->name('olts.test-snmp');
         Route::post('/olts/{olt}/test-ssh', [\App\Http\Controllers\OltController::class, 'testSsh'])->name('olts.test-ssh');
         Route::patch('/olts/{olt}/toggle', [\App\Http\Controllers\OltController::class, 'toggle'])->name('olts.toggle');
+        Route::post('/olts/{olt}/fetch-onus', [\App\Http\Controllers\OltController::class, 'fetchOnus'])->name('olts.fetch-onus');
     });
 });
